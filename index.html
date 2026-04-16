@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC Dashboard | Mini-SOAR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-10 font-sans">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-blue-400 mb-2">SOC Alert Dashboard</h1>
+        <p class="text-gray-400 mb-8">Mini-SOAR Automated Phishing Responder</p>
+
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-200">Simulate Email Alert</h2>
+            <p class="text-sm text-gray-400 mb-4">Enter a URL found in a suspicious employee email to trigger the SOAR Playbook.</p>
+            <div class="flex gap-4">
+                <input type="text" id="sus-url" value="http://internetbadguys.com" class="w-full bg-gray-700 text-white border border-gray-600 rounded px-4 py-2 focus:outline-none focus:border-blue-500" placeholder="Enter a URL to scan...">
+                <button onclick="triggerSoar()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-semibold transition-colors">
+                    Trigger SOAR
+                </button>
+            </div>
+        </div>
+
+        <div id="alert-box" class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <p class="text-green-500 font-mono">System Online. Waiting for alerts...</p>
+        </div>
+    </div>
+
+    <script>
+        async function triggerSoar() {
+            const urlInput = document.getElementById('sus-url').value;
+            const alertBox = document.getElementById('alert-box');
+
+            alertBox.innerHTML = `<p class="text-yellow-400 font-mono animate-pulse">Running SOAR Playbook... checking VirusTotal for ${urlInput}</p>`;
+
+            try {
+                const response = await fetch('webhook.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput })
+                });
+
+                const result = await response.json();
+
+                if (result.status === "error") {
+                    alertBox.innerHTML = `<p class="text-red-500 font-mono">Error: ${result.message}</p>`;
+                    return;
+                }
+
+                alertBox.innerHTML = `
+                    <div class="font-mono">
+                        <p class="text-gray-300">Incident: <span class="text-white">${result.incident}</span></p>
+                        <p class="text-gray-300">URL Scanned: <span class="text-white">${result.url_scanned}</span></p>
+                        <hr class="border-gray-700 my-3">
+                        <p class="text-gray-300 mt-2">Threat Level: <span class="${result.color_code} font-bold text-xl">${result.threat_level}</span></p>
+                        <p class="text-gray-300 mt-2">SOAR Automated Action: <span class="text-blue-400 font-bold">${result.action_taken}</span></p>
+                    </div>
+                `;
+
+            } catch (error) {
+                alertBox.innerHTML = `<p class="text-red-500 font-mono">Failed to connect to SOAR backend.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
